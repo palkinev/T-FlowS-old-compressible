@@ -1,128 +1,44 @@
 CGNS depends on HDF5.
 
-If you want to use parallel HDF5, then HDF5 must be built with mpi lib
+If you want to use parallel HDF5, then HDF5 must be built with mpi lib.
+Latest two HDF5 versions are 5.1.8 and 5.1.10.
 
-Latest two versions of HDF5 are 5.1.8 and 5.1.10
+To build and install CNGS library: open, edit, execute "bash install_cgns.sh"
 
---------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------
 Things to consider by yourself:
 
 1) Paraview 5.4.1 & Visit 2.12.3 work with HDF5 5.1.8 and not with 5.1.10
 
-2) Both versions are on the bitbucket website, which mean you can get them with following command:
+2) They are both on the bitbucket website, which mean you can get them with following command:
 
-git clone --depth=1  https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git --branch hdf5_1_8 --single-branch ./HDF5
+	git clone --depth=1  https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git --branch hdf5_1_8 --single-branch ./HDF5
 
-, but branch hdf5_1_10 does not have "configure" file, only cmake configure files.
+	, but branch hdf5_1_10 does not have "configure" file, only cmake configure files.
 
-Version 5.1.10 with configure file is placed at website:
+	Version 5.1.10 with configure file is placed at website:
 
-wget https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.10.1.tar
+	wget https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.10.1.tar
 
 3) before you can build HDF5 for Fortran you may need to build mpi manually since 
 
-repository mpif90 was built with different gfortran version.
+	repository mpif90 was built with different gfortran version.
 
-And this means when compiler meets an obligatory function that has an header:
+	And this means when compiler meets an obligatory function that has an header:
 
-"
-  USE MPI
-"
+	"
+	  USE MPI
+	"
 
-it will not pass this test and fail configuration.
+	it will not pass this test and fail configuration.
 
-If you want to use " use mpi" you must build mpi by yourself.
+	If you want to use " use mpi" you must build mpi by yourself.
 
-Instructions for that are added below.
+	Instructions for that are added below.
 
-Otherwise you can comment "use mpi" and put " include 'mpif.h'" after "implicit none".
+	Otherwise you can comment "use mpi" and put " include 'mpif.h'" after "implicit none".
 
+	At the moment only "fortran/testpar/ptest.f90" function has "USE MPI" header. (*)
 
-# cgns-tools contains CGNS viewer, to build it you need
-#
-#To build tcl
-#./configure --prefix=$PWD/install_dir
-#
-#To build tk
-#./configure --prefix=$PWD/install_dir/ --with-tcl=/home/l_palkin_e/eclipse/remote-git-my-code/Library/CGNS/TCL/unix/install_dir/lib/
-
---------------------------------------------------
-
-PATH=$(PWD); # CNGS dir which contain CNGS/ HDF5/ and optionally MPICH/ folders
-
-#------ 1 : HDF5 version 5.1.10
-
-wget https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.10.1.tar; tar -xvf hdf5-1.10.1.tar; mv hdf5-1.10.1/ HDF5; cd HDF5
-
-# configure for HDF5
-CC=mpicc FC=mpif90 FCFLAGS=-O3 ./configure --prefix=$PWD/install_dir/ --enable-fortran  --enable-parallel --disable-shared
-
-make
-# make check         # for self-confidence (~30+ min)
-make install
-# make check-install # for self-confidence
-
-cd $(PATH)
-
-#------ 2 : CGNS (latest version)
-
-git clone --depth=1  https://github.com/CGNS/CGNS.git CGNS/; cd CGNS/; rm -rf .git; cd src
-
-# configure for CGNS
-FLIBS=-Wl,--no-as-needed\ -ldl\ -lz\  
-LIBS=-Wl,--no-as-needed\ -ldl\ -lz\ 
-CC=mpicc \ 
-FC=mpif90 \ 
-./configure\ 
---prefix=$(PATH)/CGNS/install_dir\ 
---with-fortran\ 
---enable-lfs\ 
---enable-64bit\ 
---disable-shared\ 
---disable-debug\ 
---with-zlib\ 
---enable-parallel\ 
---disable-cgnstools\ 
---with-hdf5=$(PATH)/HDF5/install_dir\ 
---enable-cgnstools\ 
---with-tcl=$(PATH)/TCL/\ 
---with-tk=$(PATH)/TK/
-
-make
-make install
-
-
-cd tests                                   # for self-confidence
-make                                       # for self-confidence
-make test                                  # for self-confidence
-cd ../examples/fortran                     # for self-confidence
-make                                       # for self-confidence
-make test                                  # for self-confidence
-cd ../../Test_UserGuideCode/Fortran_code   # for self-confidence
-make                                       # for self-confidence
-make test                                  # for self-confidence
-cd ../C_code                               # for self-confidence
-make                                       # for self-confidence
-make test                                  # for self-confidence
-
-
-cd $(PATH)
-
-
-#---------
-
-
-To build MPICH from sources with your gfortran version:
-
-mkdir -p MPICH/
-wget http://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz; tar -zxvf mpich-3.2.1.tar.gz; mv mpich-3.2.1/ MPICH; cd MPICH
-	
-./configure --prefix=$PWD/install_dir/ --enable-fast=all,O3 --enable-fortran=all --disable-shared --disable-dependency-tracking
-make
-make intall
-#make check   # for self-confidence
-#make testing # for self-confidence
-
-
-# and now your mpif90 compiler is at
-FC_C = $(PATH)/MPICH/install_dir/bin/mpif90
+	Futher below I show instructions for standard mpif90 from repository (which imply(*) )
+-------------------------------------------------------------------------------------------------------------------
