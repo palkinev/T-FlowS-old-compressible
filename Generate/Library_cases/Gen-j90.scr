@@ -1,0 +1,14 @@
+#QSUB -lM 100Mw             # Mandatory qsub options specifying 
+#QSUB -lT 10000            # Memory and CPU time limits.
+
+ja                         # Turn on job accounting.
+
+assign -N ieee_64 u:9      # Be compatible with Cray T-3E
+
+cd ~/Development/T-77/Test # Go to working directory
+
+rm -f Gen.out
+../Gen/RUN < Gen.cmn > Gen.out
+
+ja -cst                    # Print a job accounting summary 
+                           # report.

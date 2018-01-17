@@ -1,0 +1,6 @@
+#!/bin/bash
+#PBS -q cluster
+#PBS -l nodes=1:ppn=1
+
+cd /home/niceno/development/T-Rex/Test
+../Process/RUN > out

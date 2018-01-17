@@ -1,0 +1,23 @@
+#!/bin/csh
+# See man qsub(1) for details...
+#
+#QSUB -l mpp_p=4
+#QSUB -l mpp_t=3600
+#QSUB -lM 128MB
+#QSUB -s /bin/csh
+#QSUB -nr
+#QSUB
+
+assign -N ieee -F f77 p:%.cns
+assign -F f77 p:%.geo
+
+cd ~/Development/T-Rex/Test
+if (-e stop) rm -f stop
+
+ja
+date
+mpprun -n4 ../Pro/RUN 
+date
+ja -cflst
+if (-e start) qsub T-Rex-4.scr 
+

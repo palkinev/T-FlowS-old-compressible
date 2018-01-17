@@ -1,0 +1,5 @@
+#/bin/bash
+#qsub -q scientists
+#qsub
+cd ~/Development/T-Rex/Test/Channel
+../../Processor/RUN > out_Re600-full-01

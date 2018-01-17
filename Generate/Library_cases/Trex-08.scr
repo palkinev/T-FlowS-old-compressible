@@ -1,0 +1,19 @@
+#!/bin/csh
+# See man qsub(1) for details...
+#
+#QSUB -l mpp_p=8
+#QSUB -l mpp_t=3600
+#QSUB -lM 128MB
+#QSUB -s /bin/csh
+#QSUB -nr
+#QSUB
+
+cd /work/tnwtnice/Channel
+
+ja
+date
+mpprun -n8 ./T-Rex 
+date
+ja -cflst
+if (!(-e stop)) qsub Trex-08.scr 
+

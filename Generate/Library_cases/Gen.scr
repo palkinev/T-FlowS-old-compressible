@@ -1,0 +1,2 @@
+../Gen/RUN < Gen.cmn > Gen.out
+

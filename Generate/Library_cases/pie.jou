@@ -1,0 +1,77 @@
+/ Journal File for GAMBIT 2.0.4
+/ File opened for write Fri Dec  6 10:22:50 2002.
+/ Journal File for GAMBIT 2.0.4
+/ File opened for write Fri Dec  6 10:11:32 2002.
+/ Journal File for GAMBIT 2.0.4
+/ File opened for write Fri Dec  6 10:02:35 2002.
+volume create height 3 radius1 9 radius2 9 radius3 9 offset 0 0 1.5 zaxis frustum
+volume create height 3 radius1 1 radius2 1 radius3 1 offset 0 0 1.5 zaxis frustum
+volume subtract "volume.1" volumes "volume.2" keeptool
+face create width 10 height 10 xyplane rectangle
+face move "face.8" offset 0 0 2
+volume split "volume.2" faces "face.8" connected bientity
+face delete "face.9" lowertopology
+volume delete "volume.3" lowertopology
+face create width 20 height 20 zxplane rectangle
+volume split "volume.1" faces "face.11" connected bientity keeptool
+volume split "volume.2" faces "face.11" connected bientity keeptool
+volume delete "volume.1" lowertopology
+volume delete "volume.2" lowertopology
+face move "face.11" dangle 45 vector 0 0 1 origin 0 0 0
+volume split "volume.3" faces "face.11" connected bientity keeptool
+volume split "volume.4" faces "face.26" connected bientity keeptool
+volume delete "volume.5" lowertopology
+volume delete "volume.6" lowertopology
+face delete "face.11" "face.20" "face.14" lowertopology
+face delete "face.26" "face.31" "face.24" "face.34" lowertopology
+face delete "face.33" lowertopology
+face connect "face.10" "face.12" "face.17" "face.18" "face.23" "face.25" \
+  "face.27" "face.30" "face.32" "face.35" "face.37" real
+face cmove "face.18" multiple 1 offset 0 0 -1
+volume split "volume.3" faces "face.38" connected bientity
+face connect "face.10" "face.12" "face.17" "face.18" "face.23" "face.25" \
+  "face.27" "face.30" "face.32" "face.35" "face.37" "face.38" "face.39" \
+  "face.40" "face.41" "face.42" real
+edge connect "edge.1" "edge.24" "edge.26" "edge.29" "edge.39" "edge.41" \
+  "edge.42" "edge.49" "edge.50" "edge.52" "edge.56" "edge.57" "edge.71" \
+  "edge.72" "edge.73" "edge.74" "edge.78" "edge.79" "edge.84" "edge.85" \
+  "edge.87" "edge.88" "edge.89" "edge.90" "edge.91" real
+solver select "Generic"
+physics create "one" btype "ELEMENT_SIDE" face "face.30" "face.17" \
+  "face.23"
+physics create "two" btype "ELEMENT_SIDE" face "face.37"
+physics create "three" btype "ELEMENT_SIDE" face "face.42" "face.12" \
+  "face.35" "face.25" "face.39" "face.32"
+physics create "four" btype "ELEMENT_SIDE" face "face.40" "face.27"
+physics create "five" btype "ELEMENT_SIDE" face "face.18"
+undo begingroup
+edge modify "edge.26" "edge.84" "edge.52" backward
+edge picklink "edge.26" "edge.84" "edge.52" "edge.50" "edge.29" "edge.87"
+edge mesh "edge.26" "edge.87" "edge.29" "edge.50" "edge.84" "edge.52" \
+  firstlast ratio1 0.25 intervals 40
+undo endgroup
+undo begingroup
+edge picklink "edge.89" "edge.49" "edge.24" "edge.91"
+edge mesh "edge.91" "edge.24" "edge.49" "edge.89" successive ratio1 1 \
+  intervals 20
+undo endgroup
+undo begingroup
+edge picklink "edge.71" "edge.73" "edge.39" "edge.90" "edge.88"
+edge mesh "edge.88" "edge.90" "edge.39" "edge.73" "edge.71" successive ratio1 \
+  1 intervals 40
+undo endgroup
+undo begingroup
+edge modify "edge.74" "edge.41" backward
+edge picklink "edge.74" "edge.41" "edge.72" "edge.78"
+edge mesh "edge.78" "edge.72" "edge.74" "edge.41" successive ratio1 1 \
+  intervals 20
+undo endgroup
+undo begingroup
+edge picklink "edge.79" "edge.42" "edge.57" "edge.1" "edge.85" "edge.56"
+edge mesh "edge.56" "edge.85" "edge.1" "edge.57" "edge.42" "edge.79" \
+  successive ratio1 1 intervals 6
+undo endgroup
+volume mesh "volume.5" map
+volume mesh "volume.3" map
+volume mesh "volume.4" cooper source "face.37" "face.23"
+export gambit "pie.neu"
