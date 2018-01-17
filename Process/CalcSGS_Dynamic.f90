@@ -15,11 +15,11 @@
 !   filter is introduced and denoted as \hat{} (^), it is applied after cell   !
 !   filter \bar{}.                                                             !
 !----------------------------------[Modules]-----------------------------------!
-  USE allp_mod, only : tiny
-  USE all_mod
-  USE pro_mod
-  USE les_mod
-  USE rans_mod
+  use allp_mod, only : tiny
+  use all_mod
+  use pro_mod
+  use les_mod
+  use rans_mod
 !------------------------------------------------------------------------------!
   implicit none
 !-----------------------------------[Locals]-----------------------------------!

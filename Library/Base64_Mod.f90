@@ -1,29 +1,27 @@
-!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>!
-!                              !                                       !
-!                              !                                       !
-!   module that can convert    !                                       !
-!   ASCII data to base64 MIME  !                                       !
-!   ASCII representation of    !                                       !
-!   binary format and reverse  !                                       !
-!   Disadvantages: slower than !                                       !
-!   binary, weights 1/3 times  !                                       !
-!   more then binary           !
-!   Advantages: cross-platform !                                       !
-!>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>!
+!------------------------------------------------------------------------------!
+!   This module is designed to convert ASCII data to base64 MIME ASCII         !
+!   representation of binary format and reverse                                !
+!   Disadvantages: slower than binary, weights 1/3 times more then binary      !
+!   Advantages: cross-platform                                                 !
+!------------------------------------------------------------------------------!
+!   This module originated from https://github.com/szaghi/VTKFortran           !
+!   Greatly appreciated.                                                       !
+!   But that code follows requires gfortran 6+ since StringiFor dependency     !
+!   Therefore code was rewritten to follow gfortran 4.8 standard               !
+!   ("Deferred-length character strings")               !
+!------------------------------------------------------------------------------!
 module Base64_Mod
-! requires gfortran 4.8 ("Deferred-length character strings")
-
+!------------------------------------------------------------------------------!
   implicit none
-
-  character(len=64), parameter, private :: &
-    base64_chars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-            !(A-Z, a-z, 0-9, +, /) - 64 symbols
-            ! padd symbol "=" as 65-symbol
-            ! A is 0, / is 63
-  character(len=1),  parameter, private :: &
-    padd_character = "="
-  real(kind=8),    parameter, public :: max_real_8 = huge(1._8 )
-  integer(kind=1), parameter, public :: max_int_1  = huge(1_1)
+!-----------------------------------[Locals]-----------------------------------!
+  character(len=64), parameter, private :: base64_chars  = &
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    !(A-Z, a-z, 0-9, +, /) - 64 symbols
+    ! padd symbol "=" as 65-symbol
+    ! A is 0, / is 63
+  character(len=1),  parameter, private :: padd_character = "="
+  real(kind=8),    parameter, public    :: max_real_8 = huge(1._8 )
+  integer(kind=1), parameter, public    :: max_int_1  = huge(1_1)
   ! defined in init
   integer(kind=1), private :: bit_size_real_8 
   integer(kind=1), private :: byte_size_real_8
@@ -51,7 +49,7 @@ module Base64_Mod
 
   !character(len=:), allocatable, intent(out) :: code    ! valid since Fortran 2003
 
-  ! functions
+!----------------------------------[Functions]---------------------------------!
   public :: B64_Mod_Init
   public :: Encode_B64
   public :: Decode_B64

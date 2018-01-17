@@ -47,11 +47,11 @@ fi
 #------ 2 : HDF5 5.1.8 (Paraview 5.4.1 & Visit 2.12.3 work with HDF5 5.1.8 and not with 5.1.10)
 
 # download
-git clone --depth=1  https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git --branch hdf5_1_8 --single-branch ./HDF5
+git clone --depth=1  https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git --branch hdf5_1_8 ./HDF5
 
 # configure
 cd HDF5/; 
-FCFLAGS=-O3 ./configure --prefix=$PWD/install_dir/ --enable-fortran  --enable-parallel --disable-shared
+FCFLAGS=-O3 ./configure --prefix=$PWD/install_dir/ --enable-fortran  --enable-parallel --disable-shared --enable-production
 
 # build
 make

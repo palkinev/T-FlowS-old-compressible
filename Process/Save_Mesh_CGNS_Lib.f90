@@ -274,12 +274,12 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
   call cgp_coord_write_f(index_file,index_base,index_zone,RealDouble, &
    'CoordinateY',index_coord,ier)
   call cgp_coord_write_data_f(index_file,index_base,index_zone,index_coord, &
-    1,NC,x,ier) ! write y grid coordinates
+    1,NC,y,ier) ! write y grid coordinates
   ! prepare towrite z nodes
   call cgp_coord_write_f(index_file,index_base,index_zone,RealDouble, &
    'CoordinateZ',index_coord,ier)
   call cgp_coord_write_data_f(index_file,index_base,index_zone,index_coord, &
-    1,NC,x,ier) ! write z grid coordinates
+    1,NC,z,ier) ! write z grid coordinates
 
 
 !----------------- sequential

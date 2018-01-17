@@ -36,6 +36,16 @@ If you want to use " use mpi" you must build mpi by yourself.
 Instructions for that are added below.
 
 Otherwise you can comment "use mpi" and put " include 'mpif.h'" after "implicit none".
+
+
+# cgns-tools contains CGNS viewer, to build it you need
+#
+#To build tcl
+#./configure --prefix=$PWD/install_dir
+#
+#To build tk
+#./configure --prefix=$PWD/install_dir/ --with-tcl=/home/l_palkin_e/eclipse/remote-git-my-code/Library/CGNS/TCL/unix/install_dir/lib/
+
 --------------------------------------------------
 
 PATH=$(PWD); # CNGS dir which contain CNGS/ HDF5/ and optionally MPICH/ folders
@@ -59,7 +69,24 @@ cd $(PATH)
 git clone --depth=1  https://github.com/CGNS/CGNS.git CGNS/; cd CGNS/; rm -rf .git; cd src
 
 # configure for CGNS
-FLIBS=-Wl,--no-as-needed\ -ldl\ -lz  LIBS=-Wl,--no-as-needed\ -ldl\ -lz CC=mpicc FC=mpif90 ./configure --prefix=$(PATH)/CGNS/install_dir --with-hdf5=$(PATH)/HDF5/install_dir --with-fortran --enable-lfs --enable-64bit --disable-shared --disable-debug --with-zlib --disable-cgnstools --enable-parallel
+FLIBS=-Wl,--no-as-needed\ -ldl\ -lz\  
+LIBS=-Wl,--no-as-needed\ -ldl\ -lz\ 
+CC=mpicc \ 
+FC=mpif90 \ 
+./configure\ 
+--prefix=$(PATH)/CGNS/install_dir\ 
+--with-fortran\ 
+--enable-lfs\ 
+--enable-64bit\ 
+--disable-shared\ 
+--disable-debug\ 
+--with-zlib\ 
+--enable-parallel\ 
+--disable-cgnstools\ 
+--with-hdf5=$(PATH)/HDF5/install_dir\ 
+--enable-cgnstools\ 
+--with-tcl=$(PATH)/TCL/\ 
+--with-tk=$(PATH)/TK/
 
 make
 make install
