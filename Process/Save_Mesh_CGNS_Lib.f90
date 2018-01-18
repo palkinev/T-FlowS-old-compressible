@@ -27,17 +27,21 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
   implicit none
   include 'mpif.h'
 !-----------------------------------[Locals]-----------------------------------!
-  integer            :: commsize, commrank, ierr
-  integer            :: maxelemi
+  integer(C_INT)     :: commsize, commrank
 
   ! CGNS variables
-  integer            :: ifirstnode, nbdyelem
-  integer            :: index_file, index_section, ielem_no
-  integer            :: index_base, index_zone, index_coord
+  integer            :: boundry_elems
+  integer            :: file_idx ! CGNS file index number
+  integer            :: section_idx ! Element section index, where 1 ≤ S ≤ nsections
+  integer            :: base_idx ! Base index number, where 1 ≤ B ≤ nbases
+  integer            :: zone_idx ! Zone index number, where 1 ≤ Z ≤ nzones
+  integer            :: coord_idx ! Coordinate array index number, where 1 ≤ C ≤ ncoords
+  integer            :: ielem_no ! 
   integer            :: ier, iset, iphysdim, icelldim
 
-  integer(cgsize_t)  :: isize(1, 3), ielem(8, NC)
-  integer(cgsize_t)  :: nelem_start, nelem_end
+  integer(cgsize_t)  :: mesh_info(1, 3), cell_connections(8, NC)
+  integer(cgsize_t)  :: first_cell, last_cell
+  integer(cgsize_t)  :: firt_node, last_node
   character          :: basename*32, zonename*32
 
   ! Other variables
@@ -60,13 +64,13 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
   integer*1, allocatable :: SaveAreaIsEmptySum(:)
 !---------------------------------[Interface]----------------------------------!
 !==============================================================================!
-  maxelemi = NC ! maximum cells count in final file
   !-------------------------------------------------------------------!
   !   Parallel commands
   call cgp_mpi_comm_f(MPI_COMM_WORLD, ier) ! Set the MPI communicator for CGNS
   !call cgp_mpi_info_f(integer info, ier) ! Set the MPI info object for CGNS
   call cgp_mpi_info_f(0, ier) ! Set the MPI info object for CGNS
   call cgp_pio_mode_f(CGP_INDEPENDENT, ier) ! Set the parallel IO mode for CGNS
+
   !call cgp_error_exit_f()  ! Exit with error message 
   !-------------------------------------------------------------------!
 
@@ -140,7 +144,6 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
 
     ! filtering cells
     do c = 1, NC
-  !==============================================================================!
       if (    xc(c) > x1 &
         .and. xc(c) < x2 &
         .and. xc(c) > x3 &
@@ -169,7 +172,7 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
         MPI_INTEGER,         & ! datatype
         MPI_SUM,             & ! operation
         MPI_COMM_WORLD,      &
-        ierr )
+        ier )
     end if
 
   ! in case of single processor
@@ -220,11 +223,10 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
   ! 1        2       67       66      261      262      327      326
   ! 
 
-  !allocate(ielem(8, NC)); ielem = 0
+  !allocate(cell_connections(8, NC)); cell_connections = 0
   nodes_in_current_cell = 0
   ielem_no = 0 ! ??? index of first element in current cell
-  nelem_start = 1 ! ??? start element
-
+  
   do c = 1, NC
     call ReadC(9,inp,tn,ts,te)
     read(inp(ts(1):te(1)),*) dummy ! "hex"/"tetra"/"pyramid"/ word
@@ -232,10 +234,8 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
 
     call ReadC(9,inp,tn,ts,te)
     do n = 1, nodes_in_current_cell
-      read(inp(ts(n):te(n)),*) ielem(n, c) ! nodes index is the same as in gmv
+      read(inp(ts(n):te(n)),*) cell_connections(n, c) ! nodes index is the same as in gmv
     end do
-    !write(*,*) ielem(:, c)
-
     ielem_no = ielem_no + 1
   end do
 
@@ -248,73 +248,123 @@ subroutine Save_Mesh_CGNS_Lib(sub)                                             !
 
   !----------   open CGNS file for write
   
-  call cgp_open_f('grid.cgns',CG_MODE_WRITE,index_file,ier)
-    if (ier .ne. CG_OK) call cg_error_exit_f
+  call cgp_open_f('grid.cgns',CG_MODE_WRITE,file_idx,ier)
+    if (ier.ne.CG_OK) then
+       print*,'*FAILED* cgp_open_f'
+       call cgp_error_exit_f()
+    endif
 
   !----------   write x, y, z grid points to CGNS file (use SIDS-standard)
-  basename = 'Base'
+  basename = "Base 1"
   icelldim = 3
   iphysdim = 3
-  call cg_base_write_f(index_file,basename,icelldim,iphysdim,index_base,ier)
-  zonename = 'Zone  1' !define zone name (user can give any name)
-  isize(1,1) = Nnodes ! vertex size
-  isize(1,2) = NC_In_Sub_Zone ! cell size
-  isize(1,3) = 0 ! boundary vertex size (zero if elements not sorted)
-  call cg_zone_write_f(index_file,index_base,zonename,isize, &
-      Unstructured,index_zone,ier) ! create zone
+  call cg_base_write_f(file_idx,basename,icelldim,iphysdim,base_idx,ier)
+    if (ier.ne.CG_OK) then
+       print*,'*FAILED* cg_base_write_f'
+       call cgp_error_exit_f()
+    endif
+  zonename = "Zone  1" !define zone name (user can give any name)
+  mesh_info(1,1) = Nnodes ! vertex count
+  mesh_info(1,2) = NC_In_Sub_Zone ! cell count
+  mesh_info(1,3) = 0 ! boundary vertex size (zero if elements not sorted)
+  call cg_zone_write_f(file_idx,base_idx,zonename,mesh_info, &
+    Unstructured,zone_idx,ier) ! create zone
+    if (ier.ne.CG_OK) then
+     print*,'*FAILED* cg_zone_write_f'
+     call cgp_error_exit_f()
+  endif
 
 !--------- parallel
 
-  ! prepare towrite x nodes
-  call cgp_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-   'CoordinateX',index_coord,ier)
-  call cgp_coord_write_data_f(index_file,index_base,index_zone,index_coord, &
-    1,NC,x,ier) ! write x grid coordinates
-  ! prepare towrite y nodes
-  call cgp_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-   'CoordinateY',index_coord,ier)
-  call cgp_coord_write_data_f(index_file,index_base,index_zone,index_coord, &
-    1,NC,y,ier) ! write y grid coordinates
-  ! prepare towrite z nodes
-  call cgp_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-   'CoordinateZ',index_coord,ier)
-  call cgp_coord_write_data_f(index_file,index_base,index_zone,index_coord, &
-    1,NC,z,ier) ! write z grid coordinates
+  firt_node = 1
+  last_node = Nnodes
+  first_cell = 1 ! ??? start element
+  last_cell = NC ! ??? start element
 
+  !---------- create empty "CoordinateX" node in DB
+  call cgp_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+    'CoordinateX',coord_idx,ier)
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_f (Coord_X)'
+      call cgp_error_exit_f()
+    endif
+  !---------- fill "CoordinateX" node in DB
+  call cgp_coord_write_data_f(file_idx,base_idx,zone_idx,coord_idx, &
+    firt_node,last_node,x,ier)
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_data_f (Coord_X)'
+      call cgp_error_exit_f()
+    endif
 
+  !---------- create empty "CoordinateY" node in DB
+  call cgp_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+    'CoordinateY',coord_idx,ier)
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_f (Coord_Y)'
+      call cgp_error_exit_f()
+    endif
+    !---------- fill "CoordinateY" node in DB
+  call cgp_coord_write_data_f(file_idx,base_idx,zone_idx,coord_idx, &
+      firt_node,last_node,y,ier)
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_data_f (Coord_Y)'
+      call cgp_error_exit_f()
+    endif
+
+  !---------- create empty "CoordinateZ" node in DB
+  call cgp_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+    'CoordinateZ',coord_idx,ier)
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_f (Coord_Z)'
+      call cgp_error_exit_f()
+    endif
+  !---------- fill "CoordinateZ" node in DB
+  call cgp_coord_write_data_f(file_idx,base_idx,zone_idx,coord_idx, &
+    firt_node,last_node,z,ier) ! write z grid coordinates
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_coord_write_data_f (Coord_Z)'
+      call cgp_error_exit_f()
+    endif
 !----------------- sequential
 
-! call cg_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-!     'CoordinateX',x,index_coord,ier) ! write x grid coordinates 
-! call cg_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-!     'CoordinateY',y,index_coord,ier) ! write y grid coordinates 
-! call cg_coord_write_f(index_file,index_base,index_zone,RealDouble, &
-!     'CoordinateZ',z,index_coord,ier) ! write z grid coordinates 
+! call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+!     'CoordinateX',x,coord_idx,ier) ! write x grid coordinates 
+! call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+!     'CoordinateY',y,coord_idx,ier) ! write y grid coordinates 
+! call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+!     'CoordinateZ',z,coord_idx,ier) ! write z grid coordinates 
 
-
-  nelem_end = ielem_no ! index no of last element
-  if (nelem_end .gt. maxelemi) then
-    if (this < 2) write(6,'('' Error, must increase maxelemi to at least '', &
-     i7)') nelem_end
-    stop
-  end if
-  
 !----------------- sequential
-!  nbdyelem = 0 ! unsorted boundary elements
-!  call cg_section_write_f(index_file,index_base,index_zone, &
-!       'Elem',HEXA_8,nelem_start,nelem_end,nbdyelem,ielem, &
-!       index_section,ier) ! write HEXA_8 element connectivity
+!  boundry_elems = 0 ! unsorted boundary elements
+!  call cg_section_write_f(file_idx,base_idx,zone_idx, &
+!       'Elem',HEXA_8,first_cell,last_cell,boundry_elems,cell_connections, &
+!       section_idx,ier) ! write HEXA_8 element connectivity
+
+
+ ! CALL cgp_section_write_f(F, B, Z, 'Hex', HEXA_8, start_1, totelems, 0, E, ierr)
+ ! CALL cgp_elements_write_data_f(F, B, Z, E, start, END, ie, ierr)
 
 !--------- parallel
-  nbdyelem = 0 ! unsorted boundary elements
-  call cgp_section_write_f(index_file,index_base,index_zone, &
-    'Elem',HEXA_8,nelem_start,nelem_end,nbdyelem, &
-    index_section,ier) ! prepare to write connectivity data
+  boundry_elems = 0 ! unsorted boundary elements
 
-  call cgp_elements_write_data_f(index_file,index_base,index_zone, &
-    nelem_start,nelem_end,ielem,ier) ! write HEXA_8 element connectivity
+  !---------- create empty "Elem" node in DB with nodes connectivity
+  call cgp_section_write_f(file_idx,base_idx,zone_idx, &
+    'Elem',HEXA_8,first_cell,last_cell,boundry_elems, &
+    section_idx,ier) ! prepare to write connectivity data
+    if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_section_write_f'
+      call cgp_error_exit_f()
+    endif
+  !---------- fill "Elem" node in DB with nodes connectivity
+  call cgp_elements_write_data_f(file_idx,base_idx,zone_idx, &
+    section_idx,first_cell,last_cell,cell_connections,ier) ! write HEXA_8 element connectivity
+      if (ier.ne.CG_OK) then
+      print*,'*FAILED* cgp_elements_write_data_f (elements)'
+      call cgp_error_exit_f()
+    endif
 
-  call cgp_close_f(index_file,ier)
+  !---------- close DB
+  call cgp_close_f(file_idx,ier)
   if (this < 2) write(6,'('' Successfully wrote unstructured grid to file'', &
     '' grid.cgns'')') ! close CGNS file
 
