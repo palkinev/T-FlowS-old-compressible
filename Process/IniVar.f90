@@ -344,7 +344,8 @@ subroutine IniVar
 	call SaveVTK_ascii_base64(this,NC,'SAVEtttttt')
 	call SavParView(this,NC,'SAVEcccccc')
 
-	call Save_Mesh_CGNS_Lib(this) ! -> grid.cgns
+	call Save_Mesh_Seq_CGNS_Lib(this) ! -> grid.cgns
+	!call Save_Mesh_Par_CGNS_Lib(this) ! -> grid.cgns
 	!call Save_Mesh_CGNS_Lib(this) ! -> grid.cgns
 	!call Add_Fields_To_Mesh_CGNS_Lib(this) ! -> grid.cgns
 

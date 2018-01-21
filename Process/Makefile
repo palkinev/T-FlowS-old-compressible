@@ -243,9 +243,11 @@ ifeq ($(VTKFortranLib),yes)
 endif
 
 ifeq ($(CGNSLib),yes)
-	FSRCS += Save_Mesh_CGNS_Lib.f90
+	FSRCS += Save_Mesh_Par_CGNS_Lib.f90
+	FSRCS += Save_Mesh_Seq_CGNS_Lib.f90
 	#FSRCS += Add_BC_To_Mesh_CGNS_Lib.f90
 	FSRCS += Add_Fields_To_Mesh_CGNS_Lib.f90
+	FSRCS += Fetch_Arrays_Dimensions_Par_CGNS_Lib.f90
 endif
 
 #....C sources
