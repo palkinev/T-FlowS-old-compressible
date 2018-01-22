@@ -11,7 +11,7 @@ subroutine Fetch_Arrays_Dimensions_Par_CGNS_Lib(idx, NN_or_NC)
   implicit none
   include 'mpif.h'
 !-----------------------------------[Locals]-----------------------------------!
-  integer*8   :: idx, NN_or_NC
+  integer*8 :: idx, NN_or_NC
   integer*8 :: Array_at_root(1:Npro)
   integer   :: i, ier
 !------------------------------------------------------------------------------!
@@ -22,10 +22,10 @@ subroutine Fetch_Arrays_Dimensions_Par_CGNS_Lib(idx, NN_or_NC)
   call mpi_gather(  &
     NN_or_NC,       & ! send number of nodes/cells, which is
     1,              & ! 1 element
-    MPI_INTEGER8,   & ! of 32-bit integer type
+    MPI_INTEGER8,   & ! of 64-bit integer type
     Array_at_root,  & ! to the root array
     1,              & ! which is 1 per processor long message.
-    MPI_INTEGER8,   & ! Received data type is 32-bit integer
+    MPI_INTEGER8,   & ! Received data type is 64-bit integer
     0,              & ! at root processor
     mpi_comm_world, & ! communicator
     ier)              ! mpi_error
@@ -33,9 +33,10 @@ subroutine Fetch_Arrays_Dimensions_Par_CGNS_Lib(idx, NN_or_NC)
   if (this < 2) then
 
     do i = 2, Npro
-      Array_at_root(i) = 1 + Array_at_root(i-1)
+      Array_at_root(i) = sum(Array_at_root(1: i-1))
     end do
-    Array_at_root(1) = 1
+    Array_at_root(1) = 0
+    Array_at_root = 1 + Array_at_root
 
   end if
 
@@ -43,10 +44,10 @@ subroutine Fetch_Arrays_Dimensions_Par_CGNS_Lib(idx, NN_or_NC)
   call mpi_scatter( &
     Array_at_root,  & ! send number of nodes/cells, which is
     1,              & ! 1 elements per processor
-    MPI_INTEGER8,   & ! of 32-bit integer type
+    MPI_INTEGER8,   & ! of 64-bit integer type
     idx,            & ! to integer "idx"
-    Npro,           & ! which is Npro elements long message.
-    MPI_INTEGER8,   & ! Received data type is 32-bit integer
+    1,              & ! which is 1 element long message.
+    MPI_INTEGER8,   & ! Received data type is 64-bit integer
     0,              & ! from the proc 1
     mpi_comm_world, & ! communicator
     ier)              ! mpi_error

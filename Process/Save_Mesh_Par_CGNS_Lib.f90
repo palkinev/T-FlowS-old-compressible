@@ -82,18 +82,18 @@ subroutine Save_Mesh_Par_CGNS_Lib(sub)                                         !
   call Fetch_Arrays_Dimensions_Par_CGNS_Lib(first_node, n_nodes)
 
   !---------- allocate x, y, z
-  allocate(x(first_node: first_node + n_nodes-1), stat = ier); x = 0.
-    if (ier.ne.0)then
+  allocate(x(first_node: first_node + n_nodes - 1), stat = ier); x = 0.
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of x'
        call cgp_error_exit_f()
     endif
-  allocate(y(first_node: first_node + n_nodes-1), stat = ier); y = 0.
-    if (ier.ne.0)then
+  allocate(y(first_node: first_node + n_nodes - 1), stat = ier); y = 0.
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of y'
        call cgp_error_exit_f()
     endif
-  allocate(z(first_node: first_node + n_nodes-1), stat = ier); z = 0.
-    if (ier.ne.0)then
+  allocate(z(first_node: first_node + n_nodes - 1), stat = ier); z = 0.
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of z'
        call cgp_error_exit_f()
     endif

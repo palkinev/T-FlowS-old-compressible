@@ -29,16 +29,22 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
   integer :: ier
 
   integer(cgsize_t)              :: mesh_info(3)
+  integer(cgsize_t), allocatable :: hex_connections(:, :)
+  integer(cgsize_t), allocatable :: pyramid_connections(:, :)
+  integer(cgsize_t), allocatable :: prism_connections(:, :)
+  integer(cgsize_t), allocatable :: tetra_connections(:, :)
   integer(cgsize_t), allocatable :: cell_connections(:, :)
   character                      :: base_name*32, zone_name*32
   integer(cgsize_t)              :: first_cell_cgns, last_cell_cgns
+  integer(cgsize_t)              :: first_node_cgns, last_node_cgns
 
   ! Other variables
   integer             :: sub
 
   character           :: dummy*100, nameTMP*80
   integer*8           :: n_nodes
-  integer             :: c, n, i
+  integer*8           :: n_hex, n_pyramid, n_prism, n_tetra
+  integer             :: c, n, i, j, k
   integer             :: nodes_in_current_cell ! 8 -> hex, 4-> tetra
 
   real, allocatable   :: x(:), y(:), z(:) ! cell node coordinates
@@ -68,17 +74,17 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
 
   !---------- allocate x, y, z
   allocate(x(1: n_nodes), stat = ier); x = 0.
-    if (ier.ne.0)then
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of x'
        call cg_error_exit_f()
     endif
   allocate(y(1: n_nodes), stat = ier); y = 0.
-    if (ier.ne.0)then
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of y'
        call cg_error_exit_f()
     endif
   allocate(z(1: n_nodes), stat = ier); z = 0.
-    if (ier.ne.0)then
+    if (ier .ne. 0) then
        print*, '*FAILED* allocation of z'
        call cg_error_exit_f()
     endif
@@ -110,32 +116,122 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
   ! gmv syntax ex:
   ! hex 8
   ! 1        2       67       66      261      262      327      326
-  !
+  ! prism 6
+  ! 2       47      265       15     1381     2683
 
   !---------- allocate cell_connections
-  allocate(cell_connections(8, 1: NC_In_Sub_Zone), stat = ier)
-  cell_connections = 0.
+  allocate(cell_connections(1: 8, 1: NC_In_Sub_Zone), stat = ier)
+  cell_connections = 0
     if (ier.ne.0)then
        print*, '*FAILED* allocation of cell_connections'
-       call cg_error_exit_f()
+       call cgp_error_exit_f()
     endif
 
-  !---------- read cell_connections
+  !---------- read cell_connections though cells
+  n_hex     = 0
+  n_pyramid = 0
+  n_prism   = 0
+  n_tetra   = 0
   do c = 1, NC_In_Sub_Zone
     nodes_in_current_cell = 0
 
     call ReadC(9,inp,tn,ts,te)
-    read(inp(ts(1):te(1)),*) dummy ! "hex"/"tetra"/"pyramid"/ word
-    read(inp(ts(2):te(2)),*) nodes_in_current_cell ! nodes count to make a cell
+    read(inp(ts(1): te(1)),*) dummy ! "hex"/"tetra"/"pyramid"/"prism" word
+    read(inp(ts(2): te(2)),*) nodes_in_current_cell ! cell vertex number
+
+    ! specify cell type in first idx
+    if     ( nodes_in_current_cell == 8) then ! hex cell
+      n_hex = n_hex + 1
+    elseif ( nodes_in_current_cell == 5) then ! pyramid cell
+      n_pyramid = n_pyramid + 1
+    elseif ( nodes_in_current_cell == 6) then ! prism cell
+      n_prism = n_prism + 1
+    elseif ( nodes_in_current_cell == 4) then ! tetra cell
+      n_tetra = n_tetra + 1
+    end if
 
     call ReadC(9,inp,tn,ts,te)
     do n = 1, nodes_in_current_cell
-      read(inp(ts(n):te(n)),*) cell_connections(n, c) ! nodes index is the same as in gmv
+      read(inp(ts(n):te(n)),*) cell_connections(n, c)
     end do
+
   end do
+
+  write(*,*) "n_hex =", n_hex, "n_pyramid =", n_pyramid, "n_prism =", n_prism, "n_tetra =", n_tetra
+
 
   call wait
   close(9) ! close .gmv file
+
+  ! fetch !
+
+  !---------- allocate shape-defined connections
+  if (n_hex .ne. 0) then
+    allocate(hex_connections(1:8, 1: &
+    n_hex), stat = ier) ! HEXA_8
+    hex_connections = 0
+    if (ier .ne. 0) then
+       print*, '*FAILED* allocation of hex_connections'
+       call cg_error_exit_f()
+    endif
+  end if
+  if (n_pyramid .ne. 0) then
+    allocate(pyramid_connections(1:5, 1: &
+    n_pyramid), stat = ier) ! PYRA_5
+    pyramid_connections = 0
+    if (ier .ne. 0) then
+       print*, '*FAILED* allocation of pyramid_connections'
+       call cg_error_exit_f()
+    endif
+  end if
+  if (n_prism .ne. 0) then
+    allocate(prism_connections(1:6, 1: &
+    n_prism), stat = ier) ! PENTA_6
+    prism_connections = 0
+    if (ier .ne. 0) then
+       print*, '*FAILED* allocation of prism_connections'
+       call cg_error_exit_f()
+    endif
+  end if
+  if (n_tetra .ne. 0) then
+    allocate(tetra_connections(1:4, 1: &
+    n_tetra), stat = ier) ! TETRA_4
+    tetra_connections = 0
+    if (ier .ne. 0) then
+       print*, '*FAILED* allocation of tetra_connections'
+       call cg_error_exit_f()
+    endif
+  end if
+
+
+  !---------- fill shape-defined cells
+
+  i = 1
+  j = 1
+  k = 1
+  n = 1
+  do c = 1, NC_In_Sub_Zone
+    if (cell_connections(8, c) .ne. 0) then ! hex
+      hex_connections    (1:8, i    ) &
+      = cell_connections(1:8, c)
+      i = i + 1
+    elseif (cell_connections(6, c) .ne. 0) then ! prism
+      prism_connections    (1:6, j    ) &
+      = cell_connections(1:6, c)
+      j = j + 1
+    elseif (cell_connections(5, c) .ne. 0) then ! pyramid
+      pyramid_connections    (1, k    ) = cell_connections(5, c)
+      pyramid_connections    (2, k    ) = cell_connections(2, c)
+      pyramid_connections    (3, k    ) = cell_connections(4, c)
+      pyramid_connections    (4, k    ) = cell_connections(3, c)
+      pyramid_connections    (5, k    ) = cell_connections(1, c)
+      k = k + 1
+    elseif (cell_connections(4, c) .ne. 0) then ! tetra
+      tetra_connections    (1:4, n    ) &
+      = cell_connections(1:4, c)
+      n = n + 1
+    end if
+  end do
 
   !-------------------------!
   ! CGNS mesh writing block !
@@ -173,23 +269,61 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
      call cg_error_exit_f()
   endif
 
-!---------- create "CoordinateX" node in DB and fill it
+  !---------- create "CoordinateX" node in DB and fill it
+  first_node_cgns = lbound(x,dim=1)
+  last_node_cgns  = ubound(x,dim=1)
+
+  !call cg_coord_partial_write_f(file_idx,base_idx,zone_idx,RealDouble, &
+  !  'CoordinateX',first_node_cgns,last_node_cgns,x,coord_idx,ier)
+
   call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
     'CoordinateX',x,coord_idx,ier)
-!---------- create "CoordinateY" node in DB and fill it
+  !---------- create "CoordinateY" node in DB and fill it
   call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
     'CoordinateY',y,coord_idx,ier)
-!---------- create "CoordinateZ" node in DB and fill it
+  !---------- create "CoordinateZ" node in DB and fill it
   call cg_coord_write_f(file_idx,base_idx,zone_idx,RealDouble, &
     'CoordinateZ',z,coord_idx,ier)
 
-  !---------- create "Elem" node in DB with nodes connectivity and fill it
-  boundry_elems = 0 ! unsorted boundary elements
-  first_cell_cgns = 1
-  last_cell_cgns = NC_In_Sub_Zone
-  call cg_section_write_f(file_idx,base_idx,zone_idx, &
-    'Elem',HEXA_8,first_cell_cgns,last_cell_cgns,boundry_elems,cell_connections, &
-    section_idx,ier) ! write HEXA_8 element connectivity
+  if ( n_hex .ne. 0) then
+  !---------- create "Hexagons" node in DB with nodes connectivity and fill it
+    boundry_elems = 0 ! unsorted boundary elements
+    first_cell_cgns = 1
+    last_cell_cgns = n_hex
+    call cg_section_write_f(file_idx,base_idx,zone_idx, &
+      'Hexagons',HEXA_8,first_cell_cgns,last_cell_cgns,boundry_elems,hex_connections, &
+      section_idx,ier) ! write HEXA_8 element connectivity
+  end if
+
+  if ( n_pyramid .ne. 0) then
+  !---------- create "Pyramids" node in DB with nodes connectivity and fill it
+    boundry_elems = 0 ! unsorted boundary elements
+    first_cell_cgns = 1
+    last_cell_cgns = n_pyramid
+    call cg_section_write_f(file_idx,base_idx,zone_idx, &
+      'Pyramids',PYRA_5,first_cell_cgns,last_cell_cgns,boundry_elems,pyramid_connections, &
+      section_idx,ier) ! write HEXA_8 element connectivity
+  end if
+
+  if ( n_prism .ne. 0) then
+  !---------- create "Prisms" node in DB with nodes connectivity and fill it
+    boundry_elems = 0 ! unsorted boundary elements
+    first_cell_cgns = 1
+    last_cell_cgns = n_prism
+    call cg_section_write_f(file_idx,base_idx,zone_idx, &
+      'Prisms',PENTA_6,first_cell_cgns,last_cell_cgns,boundry_elems,prism_connections, &
+      section_idx,ier) ! write HEXA_8 element connectivity
+  end if
+
+  if ( n_tetra .ne. 0) then
+  !---------- create "Tetrahedrons" node in DB with nodes connectivity and fill it
+    boundry_elems = 0 ! unsorted boundary elements
+    first_cell_cgns = 1
+    last_cell_cgns = n_tetra
+    call cg_section_write_f(file_idx,base_idx,zone_idx, &
+      'Tetrahedrons',TETRA_4,first_cell_cgns,last_cell_cgns,boundry_elems,tetra_connections, &
+      section_idx,ier) ! write HEXA_8 element connectivity
+  end if
 
   !---------- close DB
   call cg_close_f(file_idx,ier)
