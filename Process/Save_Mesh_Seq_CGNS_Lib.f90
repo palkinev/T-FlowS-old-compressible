@@ -203,7 +203,6 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
     endif
   end if
 
-
   !---------- fill shape-defined cells
 
   i = 1
@@ -212,23 +211,20 @@ subroutine Save_Mesh_Seq_CGNS_Lib(sub)                                         !
   n = 1
   do c = 1, NC_In_Sub_Zone
     if (cell_connections(8, c) .ne. 0) then ! hex
-      hex_connections    (1:8, i    ) &
-      = cell_connections(1:8, c)
+      hex_connections     (1:8, i) = cell_connections(1:8, c)
       i = i + 1
     elseif (cell_connections(6, c) .ne. 0) then ! prism
-      prism_connections    (1:6, j    ) &
-      = cell_connections(1:6, c)
+      prism_connections   (1:6, j) = cell_connections(1:6, c)
       j = j + 1
     elseif (cell_connections(5, c) .ne. 0) then ! pyramid
-      pyramid_connections    (1, k    ) = cell_connections(5, c)
-      pyramid_connections    (2, k    ) = cell_connections(2, c)
-      pyramid_connections    (3, k    ) = cell_connections(4, c)
-      pyramid_connections    (4, k    ) = cell_connections(3, c)
-      pyramid_connections    (5, k    ) = cell_connections(1, c)
+      pyramid_connections   (1, k) = cell_connections(2, c)
+      pyramid_connections   (2, k) = cell_connections(5, c)
+      pyramid_connections   (3, k) = cell_connections(4, c)
+      pyramid_connections   (4, k) = cell_connections(3, c)
+      pyramid_connections   (5, k) = cell_connections(1, c)
       k = k + 1
     elseif (cell_connections(4, c) .ne. 0) then ! tetra
-      tetra_connections    (1:4, n    ) &
-      = cell_connections(1:4, c)
+      tetra_connections   (1:4, n) = cell_connections(1:4, c)
       n = n + 1
     end if
   end do
