@@ -22,7 +22,8 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 # echo an error message before exiting
 trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
-mkdir -p $SRC_DIR $INSTALL_DIR
+mkdir -p $SRC_DIR/
+mkdir -p $INSTALL_DIR/
 
 #------ MPICH 3.2.1
 if [ $BUILD_MPI == true ]; then
@@ -80,58 +81,91 @@ make install
 
 cd $CGNS_DIR
 
-#------ TCL
 if [ $CGNS_TOOLS == true ]; then
+#------ TCL
 
 	cd $SRC_DIR/
 
-	tar -zxvf tcl8.6.8-src.tar.gz; mv tcl8.6.8-src TCL/; cd TCL/unix/
+	tar -zxvf tcl8.6.8-src.tar.gz; mv tcl8.6.8 TCL/; cd TCL/unix/
 
-	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz\ 
-	LIBS=-Wl,--no-as-needed\ -ldl\ -lz\ 
+	# configure
 	./configure \
 	--prefix=$INSTALL_DIR/TCL
 
+	# build
+	make
+    # no need to make install
+    make install
+
 	cd $CGNS_DIR
-fi
-#------ TK
-if [ $CGNS_TOOLS == true ]; then
+
+#------ TK (requires libx11-dev from repo)
 
 	cd $SRC_DIR/
 
-	tar -zxvf tk8.6.8-src.tar.gz; mv tk8.6.8-src TK/; cd TK/unix/
+	tar -zxvf tk8.6.8-src.tar.gz; mv tk8.6.8/ TK/; cd TK/unix/
 
-	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
-	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	# configure
 	./configure \
 	--prefix=$INSTALL_DIR/TK \
-	--with-tcl=$INSTALL_DIR/TCL/unix
+	--with-tcl=$INSTALL_DIR/TCL/lib/
+
+    # build
+	make
+    # no need to make install
+    make install
 
 	cd $CGNS_DIR
+
+	cp -r $INSTALL_DIR/TK/lib $INSTALL_DIR/TK/unix/
+
 fi
 
 #------ CGNS (latest version)
 
-cd $SRC_DIR/
+	cd $SRC_DIR/
 
-# download
-git clone --depth=1  https://github.com/CGNS/CGNS.git CGNS/; cd CGNS/; rm -rf .git; cd src/
+	# download
+	git clone --depth=1  https://github.com/CGNS/CGNS.git CGNS/; cd CGNS/; rm -rf .git; cd src/
 
-# configure
+if [ $CGNS_TOOLS == true ]; then
+
+	# configure
 	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	./configure \
-	--prefix=$CGNS_DIR/CGNS/install_dir \
-	--with-hdf5=$CGNS_DIR/HDF5/install_dir \
+	--prefix=$INSTALL_DIR/CGNS \
+	--with-hdf5=$INSTALL_DIR/HDF5 \
 	--with-fortran \
 	--enable-lfs \
 	--enable-64bit \
 	--disable-shared \
 	--disable-debug \
 	--with-zlib \
-	--disable-cgnstools \
 	--enable-64bit \
-	--enable-parallel
+	--enable-parallel \
+	--enable-cgnstools \
+	--with-tcl=$SRC_DIR/TCL \
+	--with-tk=$SRC_DIR/TK \
+	--datarootdir=$INSTALL_DIR/CGNS/tcl_scripts
+
+else # no cgns GUI tools
+
+	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	./configure \
+	--prefix=$CGNS_DIR/CGNS/ \
+	--with-hdf5=$CGNS_DIR/HDF5/ \
+	--with-fortran \
+	--enable-lfs \
+	--enable-64bit \
+	--disable-shared \
+	--disable-debug \
+	--with-zlib \
+	--enable-64bit \
+	--enable-parallel \
+	--disable-cgnstools
+fi
 
 # build
 make
@@ -157,4 +191,4 @@ cd $CGNS_DIR
 
 #---------
 
-echo CNGS is now built in "$CGNS_DIR/CGNS/install_dir".
+echo CNGS is now built in "$CGNS_DIR/CGNS/install_dir"
