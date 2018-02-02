@@ -56,9 +56,14 @@ function build_mpi_lib {
 	# return
 	cd $CGNS_DIR
 }
+#------------------------------------------
 
 #------ HDF5 5.1.8 (Paraview 5.4.1 & Visit 2.12.3 work with HDF5 5.1.8 and not with 5.1.10)
 function build_hdf5_lib {
+
+	# mpicc and mpif90 compilers from now are:
+	export CC=$INSTALL_DIR/MPICH/bin/mpicc
+	export FC=$INSTALL_DIR/MPICH/bin/mpif90
 
 	# download sources
 	cd $SRC_DIR/
@@ -84,6 +89,7 @@ function build_hdf5_lib {
 
 	cd $CGNS_DIR
 }
+#------------------------------------------
 
 #------ TCL
 function build_tcl_lib {
@@ -110,6 +116,7 @@ function build_tcl_lib {
 
 	cd $CGNS_DIR
 }
+#------------------------------------------
 
 #------ TK (requires libx11-dev from repo)
 function build_tk_lib {
@@ -138,16 +145,63 @@ function build_tk_lib {
 	cd $CGNS_DIR
 
 }
+#------------------------------------------
 
-function build_cgns_lib {
-#------ parallel CGNS with HDF5 (latest version; requires zlib)
+function build_cgns_lib_lastest {
 
-	# download sources
+	# download sources (latest version)
 	cd $SRC_DIR/
 	mkdir -p $SRC_DIR/CGNS/
 	git clone --depth=1 https://github.com/CGNS/CGNS.git ./cgns
 	rsync -azvh cgns/* $SRC_DIR/CGNS/
 	rm -rf cgns
+
+#------ parallel CGNS with HDF5
+	
+	# mpicc and mpif90 compilers from now are:
+	export CC=$INSTALL_DIR/MPICH/bin/mpicc
+	export FC=$INSTALL_DIR/MPICH/bin/mpif90
+
+	# configure
+	cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
+
+	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	./configure \
+	--prefix=$CGNS_DIR/cgnslib_latest_linux_64_hdf5_par \
+	--with-hdf5=$CGNS_DIR/HDF5/ \
+	--with-fortran \
+	--enable-lfs \
+	--enable-64bit \
+	--disable-shared \
+	--disable-debug \
+	--with-zlib \
+	--enable-parallel
+
+	# build
+	make
+	# install
+	make install
+
+	# build and run tests for self-confidence
+
+	# cd tests
+	# make
+	# make test
+	# cd ../examples/fortran
+	# make
+	# make test
+	# cd ../../Test_UserGuideCode/Fortran_code
+	# make
+	# make test
+	# cd ../C_code
+	# make
+	# make test
+
+#------ sequential CGNS with HDF5
+	# mpicc and mpif90 compilers from now are:
+	export CC=gfortran
+	export FC=cc
 
 if [ $CGNS_TOOLS == true ]; then
 
@@ -167,7 +221,7 @@ if [ $CGNS_TOOLS == true ]; then
 	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	./configure \
-	--prefix=$INSTALL_DIR/CGNS_HDF5 \
+	--prefix=$INSTALL_DIR/cgnslib_latest_linux_64_hdf5_seq \
 	--with-hdf5=$INSTALL_DIR/HDF5 \
 	--with-fortran \
 	--enable-lfs \
@@ -175,31 +229,27 @@ if [ $CGNS_TOOLS == true ]; then
 	--disable-shared \
 	--disable-debug \
 	--with-zlib \
-	--enable-parallel \
 	--enable-cgnstools \
 	--with-tcl=$INSTALL_DIR/TCL \
 	--with-tk=$INSTALL_DIR/TK \
-	--datarootdir=$INSTALL_DIR/CGNS/tcl_scripts
+	--datarootdir=$INSTALL_DIR/cgnslib_latest_linux_64_hdf5_seq/tcl_scripts
 
 else # no cgns GUI tools
 	
 	# configure
-	cd CGNS/; rm -rf .git; cd src/
+	cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
 
 	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 	./configure \
-	--prefix=$CGNS_DIR/CGNS/ \
+	--prefix=$CGNS_DIR/cgnslib_latest_linux_64_hdf5_seq \
 	--with-hdf5=$CGNS_DIR/HDF5/ \
 	--with-fortran \
 	--enable-lfs \
 	--enable-64bit \
 	--disable-shared \
 	--disable-debug \
-	--with-zlib \
-	--enable-parallel \
-	--disable-cgnstools
-
+	--with-zlib
 fi
 
 # build
@@ -222,19 +272,20 @@ make install
 # make
 # make test
 
-#------ sequential CGNS without HDF5 (->ADF5)
+#------ sequential CGNS without HDF5
+# configure
+cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
 
 FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
 ./configure \
---prefix=$INSTALL_DIR/CGNS_ADF5 \
+--prefix=$CGNS_DIR/cgnslib_latest_linux_64_adf5_seq \
 --with-fortran \
 --enable-lfs \
 --enable-64bit \
 --disable-shared \
 --disable-debug \
---with-zlib \
-
+--with-zlib
 # build
 make
 # install
@@ -242,18 +293,185 @@ make install
 
 cd $CGNS_DIR
 
+echo ------------------------------------------------------------------------------------------
+echo parallel   CNGS with HDF5 is now installed in $INSTALL_DIR/cgnslib_latest_linux_64_hdf5_par
+echo sequential CNGS with HDF5 is now installed in $INSTALL_DIR/cgnslib_latest_linux_64_hff5_seq
+echo sequential CNGS with ADF5 is now installed in $INSTALL_DIR/cgnslib_latest_linux_64_adf5_seq
+if [ $CGNS_TOOLS == true ]; then
+echo CNGS tools are installed in $INSTALL_DIR/cgnslib_latest_linux_64_hdf5_seq/bin/
+echo You can make relative links to them for convinience
+fi
+echo you can safely remove $SRC_DIR/ folder with its content
+echo ------------------------------------------------------------------------------------------
 }
 
-#--------- script with functions defined above
+#------------------------------------------
+function build_cgns_lib_3.2.1 {
 
-if [ $BUILD_MPI == true ]; then
+	# download sources (v3.2.1)
+	cd $SRC_DIR/
+	wget -N https://github.com/CGNS/CGNS/archive/v3.2.1.tar.gz
+	tar -zxvf v3.2.1.tar.gz;
+	mkdir -p $SRC_DIR/CGNS/
+	rsync -azvh CGNS-3.2.1/* $SRC_DIR/CGNS/
+	rm -r CGNS-3.2.1/
 
-	build_mpi_lib
-
+#------ parallel CGNS with HDF5
+	
 	# mpicc and mpif90 compilers from now are:
 	export CC=$INSTALL_DIR/MPICH/bin/mpicc
 	export FC=$INSTALL_DIR/MPICH/bin/mpif90
+
+	# configure
+	cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
+
+	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	./configure \
+	--prefix=$CGNS_DIR/cgnslib_3.2.1_linux_64_hdf5_par \
+	--with-hdf5=$CGNS_DIR/HDF5/ \
+	--with-fortran \
+	--enable-lfs \
+	--enable-64bit \
+	--disable-shared \
+	--disable-debug \
+	--with-zlib \
+	--enable-parallel
+
+	# build
+	make
+	# install
+	make install
+
+	# build and run tests for self-confidence
+
+	# cd tests
+	# make
+	# make test
+	# cd ../examples/fortran
+	# make
+	# make test
+	# cd ../../Test_UserGuideCode/Fortran_code
+	# make
+	# make test
+	# cd ../C_code
+	# make
+	# make test
+
+#------ sequential CGNS with HDF5
+	# mpicc and mpif90 compilers from now are:
+	export CC=gfortran
+	export FC=cc
+
+if [ $CGNS_TOOLS == true ]; then
+
+	# make links to TCL and TK where cgns searches for them
+	cd $INSTALL_DIR
+	rm -rf TCL/unix TCL/generic TK/unix TK/generic
+
+	ln -s -r -f TCL/lib     TCL/tmp; mv TCL/tmp TCL/unix
+	ln -s -r -f TCL/include TCL/tmp; mv TCL/tmp TCL/generic
+
+	ln -s -r -f TK/lib      TK/tmp;  mv TK/tmp  TK/unix
+	ln -s -r -f TK/include  TK/tmp;  mv TK/tmp  TK/generic
+
+	# configure
+	cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
+
+	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	./configure \
+	--prefix=$INSTALL_DIR/cgnslib_3.2.1_linux_64_hdf5_seq \
+	--with-hdf5=$INSTALL_DIR/HDF5 \
+	--with-fortran \
+	--enable-lfs \
+	--enable-64bit \
+	--disable-shared \
+	--disable-debug \
+	--with-zlib \
+	--enable-cgnstools \
+	--with-tcl=$INSTALL_DIR/TCL \
+	--with-tk=$INSTALL_DIR/TK \
+	--datarootdir=$INSTALL_DIR/cgnslib_3.2.1_linux_64_hdf5_seq/tcl_scripts
+
+else # no cgns GUI tools
+	
+	# configure
+	cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
+
+	FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+	./configure \
+	--prefix=$CGNS_DIR/cgnslib_3.2.1_linux_64_hdf5_seq \
+	--with-hdf5=$CGNS_DIR/HDF5/ \
+	--with-fortran \
+	--enable-lfs \
+	--enable-64bit \
+	--disable-shared \
+	--disable-debug \
+	--with-zlib
 fi
+
+# build
+make
+# install
+make install
+
+# build and run tests for self-confidence
+
+# cd tests
+# make
+# make test
+# cd ../examples/fortran
+# make
+# make test
+# cd ../../Test_UserGuideCode/Fortran_code
+# make
+# make test
+# cd ../C_code
+# make
+# make test
+
+#------ sequential CGNS without HDF5
+# configure
+cd $SRC_DIR/CGNS/; rm -rf .git; cd src/
+
+FLIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+LIBS=-Wl,--no-as-needed\ -ldl\ -lz \
+./configure \
+--prefix=$CGNS_DIR/cgnslib_3.2.1_linux_64_adf5_seq \
+--with-fortran \
+--enable-lfs \
+--enable-64bit \
+--disable-shared \
+--disable-debug \
+--with-zlib
+# build
+make
+# install
+make install
+
+cd $CGNS_DIR
+
+echo ------------------------------------------------------------------------------------------
+echo parallel   CNGS with HDF5 is now installed in $INSTALL_DIR/cgnslib_3.2.1_linux_64_hdf5_par
+echo sequential CNGS with HDF5 is now installed in $INSTALL_DIR/cgnslib_3.2.1_linux_64_hff5_seq
+echo sequential CNGS with ADF5 is now installed in $INSTALL_DIR/cgnslib_3.2.1_linux_64_adf5_seq
+if [ $CGNS_TOOLS == true ]; then
+echo CNGS tools are installed in $INSTALL_DIR/cgnslib_3.2.1_linux_64_hdf5_seq/bin/
+echo You can make relative links to them for convinience
+fi
+echo you can safely remove $SRC_DIR/ folder with its content
+echo ------------------------------------------------------------------------------------------
+}
+
+
+#--------- script with functions defined above
+
+#if [ $BUILD_MPI == true ]; then
+#
+#	build_mpi_lib
+#fi
 
 build_hdf5_lib
 
@@ -262,13 +480,5 @@ if [ $CGNS_TOOLS == true ]; then
 	build_tk_lib
 fi
 
-build_cgns_lib
-
-echo \n
-echo parallel   CNGS with HDF5         is now installed in $INSTALL_DIR/CGNS_HDF5
-echo sequential CNGS with without HDF5 is now installed in $INSTALL_DIR/CGNS_ADF5
-echo CNGS tools are installed in $INSTALL_DIR/CGNS_HDF5/bin/
-echo You can make relative links to them for convinience
-echo \n
-echo \n
-echo you can safely remove $SRC_DIR/ folder with its content
+#build_cgns_lib_lastest
+build_cgns_lib_3.2.1

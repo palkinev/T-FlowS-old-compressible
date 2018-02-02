@@ -38,10 +38,10 @@ vtk_lib = ../VTKFortran/VTKFortran-current
 # C lib with fortran interfaces for IO CGNS format
 CGNSLib = yes
 # http://cgns.github.io/
-cgns_lib = ../Library/CGNS/CGNS/install_dir
+cgns_lib = ../Library/CGNS/install_dir/CGNS
 # depends on:
 # HDF5 lib
-hdf5_lib = ../Library/CGNS/HDF5/install_dir
+hdf5_lib = ../Library/CGNS/install_dir/HDF5
 # https://support.hdfgroup.org/HDF5/examples/intro.html#fortran
 
 #----------------------------------------------------------------------#
